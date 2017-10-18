@@ -78,6 +78,7 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
 
 - (void)setWeightedData:(NSArray<GMUWeightedLatLng *> *)weightedData {
   _weightedData = [weightedData copy];
+  [self prepare];
   _dirty = YES;
 }
 
