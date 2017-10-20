@@ -145,11 +145,11 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
   return intensities;
 }
 
-- (NSArray<NSNumber *> *)generateKernel {
-  float sd = _radius / 3.0;
-  NSMutableArray<NSNumber *> *values = [NSMutableArray arrayWithCapacity:_radius * 2 + 1];
-  for (int i = -(int)_radius; i <= (int)_radius; i++) {
-    values[i + _radius] = @(expf(-i * i / (2 * sd * sd)));
+- (NSArray<NSNumber *> *)generateKernel:(NSUInteger) radius {
+  float sd = radius / 3.0;
+  NSMutableArray<NSNumber *> *values = [NSMutableArray arrayWithCapacity:radius * 2 + 1];
+  for (int i = -(int)radius; i <= (int)radius; i++) {
+    values[i + radius] = @(expf(-i * i / (2 * sd * sd)));
   }
   return values;
 }
@@ -163,7 +163,7 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
   }
   data->_colorMap = [_gradient generateColorMap];
   data->_maxIntensities = [self calculateIntensities];
-  data->_kernel = [self generateKernel];
+    data->_kernel = [self generateKernel:_radius];
   data->_radius = _radius;
   @synchronized(self) {
     _data = data;
@@ -175,9 +175,17 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
   @synchronized(self) {
     data = _data;
   }
+    
+  NSArray<NSNumber *> *kernel = data->_kernel;
+  NSUInteger radius = data->_radius;
+  if (zoom < 16) {
+    radius = _data->_radius - 25;
+    kernel = [self generateKernel:radius];
+  }
+    
   // Zoom 0 tile covers the world [-1, 1].
   double tileWidth = 2.0 / pow(2.0, zoom);
-  double padding = tileWidth * data->_radius / kGMUTileSize;
+  double padding = tileWidth * radius / kGMUTileSize;
   // One bucket per pixel.
   double bucketWidth = tileWidth / kGMUTileSize;
   double minX = -1 + x * tileWidth - padding;
@@ -218,7 +226,7 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
 //  }
 
   // Quantize points.
-  int paddedTileSize = kGMUTileSize + 2 * (int)data->_radius;
+  int paddedTileSize = kGMUTileSize + 2 * (int)radius;
   float *intensity = calloc(paddedTileSize * paddedTileSize, sizeof(float));
   for (GMUWeightedLatLng *item in points) {
     GQTPoint p = [item point];
@@ -247,8 +255,8 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
   }
 
   // Convolve data.
-  int lowerLimit = (int)data->_radius;
-  int upperLimit = paddedTileSize - (int)data->_radius - 1;
+  int lowerLimit = (int)radius;
+  int upperLimit = paddedTileSize - (int)radius - 1;
   // Convolve horizontally first.
   float *intermediate = calloc(paddedTileSize * paddedTileSize, sizeof(float));
   for (int y = 0; y < paddedTileSize; y++) {
@@ -256,10 +264,10 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
       float value = intensity[y * paddedTileSize + x];
       if (value != 0) {
         // convolve to x +/- radius bounded by the limit we care about.
-        int start = MAX(lowerLimit, x - (int)data->_radius);
-        int end = MIN(upperLimit, x + (int)data->_radius);
+        int start = MAX(lowerLimit, x - (int)radius);
+        int end = MIN(upperLimit, x + (int)radius);
         for (int x2 = start; x2 <= end; x2++) {
-          float scaledKernel = value * [data->_kernel[x2 - x + data->_radius] floatValue];
+          float scaledKernel = value * [kernel[x2 - x + radius] floatValue];
           intermediate[y * paddedTileSize + x2] += scaledKernel;
         }
       }
@@ -272,10 +280,10 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
     for (int y = 0; y < paddedTileSize; y++) {
       float value = intermediate[y * paddedTileSize + x];
       if (value != 0) {
-        int start = MAX(lowerLimit, y - (int)data->_radius);
-        int end = MIN(upperLimit, y + (int)data->_radius);
+        int start = MAX(lowerLimit, y - (int)radius);
+        int end = MIN(upperLimit, y + (int)radius);
         for (int y2 = start; y2 <= end; y2++) {
-          float scaledKernel = value * [data->_kernel[y2 - y + data->_radius] floatValue];
+          float scaledKernel = value * [kernel[y2 - y + radius] floatValue];
           finalIntensity[(y2 - lowerLimit) * kGMUTileSize + x - lowerLimit] += scaledKernel;
         }
       }
