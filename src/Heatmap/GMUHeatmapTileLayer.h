@@ -44,6 +44,8 @@ NS_ASSUME_NONNULL_BEGIN
 // The gradient used to map smoothed intensities to colors in the tiles.
 @property(nonatomic) GMUGradient *gradient;
 
+@property(nonatomic) NSNumber *maxIntensity;
+
 @end
 
 NS_ASSUME_NONNULL_END

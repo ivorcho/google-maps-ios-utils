@@ -53,12 +53,14 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
   if ((self = [super init])) {
     _radius = 20;
     NSArray<UIColor *> *gradientColors = @[
-      [UIColor colorWithRed:102.f / 255.f green:225.f / 255.f blue:0 alpha:1],
+      [UIColor colorWithRed:140.f / 255.f green:200.f / 255.f blue:0 alpha:1],
       [UIColor colorWithRed:1.0f green:0 blue:0 alpha:1]
     ];
     _gradient = [[GMUGradient alloc] initWithColors:gradientColors
                                         startPoints:@[ @0.2f, @1.0f ]
+                                       defaultColor:[UIColor clearColor]
                                        colorMapSize:1000];
+    _maxIntensity = @(0);
     _dirty = YES;
     self.opacity = 0.7;
     self.tileSize = kGMUTileSize;
@@ -73,6 +75,7 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
 
 - (void)setGradient:(GMUGradient *)gradient {
   _gradient = gradient;
+  [self prepare];
   _dirty = YES;
 }
 
@@ -112,35 +115,14 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
   return result;
 }
 
+- (void)setMaxIntensity: (NSNumber *)intensity {
+    _maxIntensity = intensity;
+}
+
 - (NSNumber *)maxValueForZoom:(int)zoom {
-  // Bucket data in to areas equal to twice radius at the given zoom.
-  // At zoom 0, one tile covers the entire range of -1 to 1.
-  // So for zoom 0 bucket size should be 2*2*radius/512.
-  // However in practice these buckets are too big, as it kind of assumes convolution with a kernel
-  // which is 1 for the entire diameter.
-  // Unless all the points are practically coincident within the bucket, this is quite wrong.
-  // Therefore apply a magical factor to give something which is a bit better in practice.
-  // TODO: apply magical factor squared to the final result rather than changing the bucket size?
-  double magicalFactor = 0.5;
-  double bucketSize = _radius / 128.0 / pow(2, zoom) * magicalFactor;
-  NSMutableDictionary<NSNumber *, NSMutableDictionary<NSNumber *, NSNumber *> *> *lookupX =
-      [NSMutableDictionary dictionary];
-  float max = 0;
-  for (GMUWeightedLatLng *dataPoint in _weightedData) {
-    GQTPoint point = [dataPoint point];
-    NSNumber *xBucket = @((int)((point.x + 1) / bucketSize));
-    NSNumber *yBucket = @((int)((point.y + 1) / bucketSize));
-    NSMutableDictionary<NSNumber *, NSNumber *> *lookupY = lookupX[xBucket];
-    if (!lookupY) {
-      lookupY = [NSMutableDictionary dictionary];
-      lookupX[xBucket] = lookupY;
-    }
-    NSNumber *value = lookupY[yBucket];
-    float newValue = [value floatValue] + dataPoint.intensity;
-    if (newValue > max) max = newValue;
-    lookupY[yBucket] = @(newValue);
-  }
-  return @(max);
+  // Currently we are using constant intensity for every zoom level.
+  // We can change this in the future
+  return _maxIntensity;
 }
 
 - (NSArray<NSNumber *> *)calculateIntensities {
@@ -231,9 +213,9 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
   bounds.maxY = maxY;
   NSArray<GMUWeightedLatLng *> *points = [data->_quadTree searchWithBounds:bounds];
   // If there is no data at all return empty tile.
-  if (points.count + wrappedPoints.count == 0) {
-    return kGMSTileLayerNoTile;
-  }
+//  if (points.count + wrappedPoints.count == 0) {
+//    return kGMSTileLayerNoTile;
+//  }
 
   // Quantize points.
   int paddedTileSize = kGMUTileSize + 2 * (int)data->_radius;

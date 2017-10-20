@@ -27,6 +27,8 @@ NS_ASSUME_NONNULL_BEGIN
 // The specific colors for the specific intensities specified by startPoints.
 @property(nonatomic, readonly) NSArray<UIColor *> *colors;
 
+@property(nonatomic, readonly) UIColor *defaultColor;
+
 // The intensities which will be the specific colors specified in colors.
 @property(nonatomic, readonly) NSArray<NSNumber *> *startPoints;
 
@@ -38,6 +40,7 @@ NS_ASSUME_NONNULL_BEGIN
 // quality improvement.
 - (instancetype)initWithColors:(NSArray<UIColor *> *)colors
                    startPoints:(NSArray<NSNumber *> *)startPoints
+                  defaultColor:(UIColor *)defaultColor
                   colorMapSize:(NSUInteger)mapSize;
 
 // Generates an array of mapSize colors for the interpolated colors for intensities between 0 and 1

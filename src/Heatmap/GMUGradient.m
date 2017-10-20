@@ -23,6 +23,7 @@
 
 - (instancetype)initWithColors:(NSArray<UIColor *> *)colors
                    startPoints:(NSArray<NSNumber *> *)startPoints
+                  defaultColor:(UIColor *)defaultColor
                   colorMapSize:(NSUInteger)mapSize {
   if ((self = [super init])) {
     if (colors.count == 0 || colors.count != startPoints.count) {
@@ -49,6 +50,7 @@
     }
     _colors = [colors copy];
     _startPoints = [startPoints copy];
+    _defaultColor = defaultColor;
     _mapSize = mapSize;
   }
   return self;
@@ -74,7 +76,7 @@
     float curValue = [_startPoints[curStartPoint] floatValue];
     float prevValue = curStartPoint == 0 ? 0 : [_startPoints[curStartPoint - 1] floatValue];
     UIColor *curColor = _colors[curStartPoint];
-    UIColor *prevColor = curStartPoint == 0 ? [UIColor clearColor] : _colors[curStartPoint - 1];
+    UIColor *prevColor = curStartPoint == 0 ? _defaultColor : _colors[curStartPoint - 1];
     colorMap[i] = [self interpolateColorFrom:prevColor
                                           to:curColor
                                        ratio:(targetValue - prevValue) / (curValue - prevValue)];
