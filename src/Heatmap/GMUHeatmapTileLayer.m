@@ -178,8 +178,11 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
     
   NSArray<NSNumber *> *kernel = data->_kernel;
   NSUInteger radius = data->_radius;
-  if (zoom < 16) {
-    radius = _data->_radius - 25;
+  if (zoom == 15) {
+    radius = _data->_radius - 20;
+    kernel = [self generateKernel:radius];
+  } else if (zoom < 15) {
+    radius = _data->_radius - 45;
     kernel = [self generateKernel:radius];
   }
     
