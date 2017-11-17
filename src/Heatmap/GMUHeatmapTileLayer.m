@@ -175,7 +175,7 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
   @synchronized(self) {
     data = _data;
   }
-    
+
   NSArray<NSNumber *> *kernel = data->_kernel;
   NSUInteger radius = data->_radius;
   if (zoom == 15) {
@@ -185,7 +185,7 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
     radius = _data->_radius - 45;
     kernel = [self generateKernel:radius];
   }
-    
+
   // Zoom 0 tile covers the world [-1, 1].
   double tileWidth = 2.0 / pow(2.0, zoom);
   double padding = tileWidth * radius / kGMUTileSize;
@@ -223,10 +223,17 @@ static void FreeDataProviderData(void *info, const void *data, size_t size) { fr
   bounds.minY = minY;
   bounds.maxY = maxY;
   NSArray<GMUWeightedLatLng *> *points = [data->_quadTree searchWithBounds:bounds];
-  // If there is no data at all return empty tile.
-//  if (points.count + wrappedPoints.count == 0) {
-//    return kGMSTileLayerNoTile;
-//  }
+  
+  // If tile does not intersect with padded data bounds return empty tile
+  GQTBounds paddedDataBounds;
+  paddedDataBounds.minX = _data->_bounds.minX - padding*8;
+  paddedDataBounds.maxX = _data->_bounds.maxX + padding*8;
+  paddedDataBounds.minY = _data->_bounds.minY - padding*8;
+  paddedDataBounds.maxY = _data->_bounds.maxY + padding*8;
+  if (!(minX < paddedDataBounds.maxX && paddedDataBounds.minX < maxX &&
+        minY < paddedDataBounds.maxY && paddedDataBounds.minY < maxY)) {
+    return kGMSTileLayerNoTile;
+  }
 
   // Quantize points.
   int paddedTileSize = kGMUTileSize + 2 * (int)radius;
